@@ -1,3 +1,5 @@
+import datetime
+
 import requests
 from bs4 import BeautifulSoup
 import pymysql
@@ -38,13 +40,25 @@ def create_dic(titles, contents, links):
     for link in links:
         arr[i]['link'] = link.attrs['href']
         i += 1
+    store_intext(arr)
 
-    storage(arr)
+def store_intext(arr):
+    time = datetime.date.today()
+    docName = "hot_" + str(time) + ".txt"
+    file = open(docName, "a+", encoding="utf-8")
+    for data in arr:
+        if (data['content']==None):
+            data['content'] = "暂无详细内容"
+        file.write(str(data['id']) + " " + "title: " + str(data['title']) + "\ncontent: " + str(data['content']) + "\nlink: " + str(data['link']))
+        file.write("\n\n")
+    file.close()
 
-def storage(arr):
+def store_indb(arr):
     db = pymysql.connect(host="localhost", user="root", password="root", port=3306, database="spiders")
     cursor = db.cursor()
     for data in arr:
+        if (data['content']==None):
+            data['content'] = "暂无详细内容"
         keys = ', '.join(data.keys())
         values = ', '.join(['%s'] * len(data))
         sql = "INSERT INTO zhihu ({keys}) VALUES ({values})".format(keys=keys, values=values)
@@ -52,7 +66,7 @@ def storage(arr):
         db.commit()
     db.close()
 
-def main():
+if __name__ == '__main__':
     file = open("cookies.txt", 'r', encoding="utf-8")
     cookie = file.read()
     headers = {
@@ -64,5 +78,3 @@ def main():
     with open("zhihu.html", 'r', encoding="utf-8") as f:
         html = f.read()
         parse_html(html)
-
-main()

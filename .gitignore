@@ -1,3 +1,5 @@
 /venv/
 cookies.txt
 zhihu.html
+*.txt
+/.idea/
