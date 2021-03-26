@@ -52,9 +52,21 @@ def process_ajax(total):
 
 def parse_json(json, article_no):
     base_url = "https://www.zhihu.com/market/paid_column/"
+    params = {
+        "url": "",
+        "title": "",
+        "serial_number_text": ""
+    }
+    arr = []
     for i in range(len(json["data"])):
         url = base_url + str(article_no) + "/section/" + json["data"][i]["id"]
-        print(url)
+        params["url"] = url
+        title = json["data"][i]["chapter"]["title"]
+        params["title"] = title
+        serial_number_text = json["data"][i]["chapter"]["title"]
+        params["serial_number_text"] = serial_number_text
+        arr.append(params)
+    
 
 if __name__ == '__main__':
     file = open("cookies.txt", 'r', encoding='utf-8')
