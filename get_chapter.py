@@ -5,7 +5,7 @@ def get_article(url, headers):
     html = requests.get(url, headers=headers).text
     soup = BeautifulSoup(html, 'lxml')
     html = soup.prettify()
-    #print(html)
+
     file = open("chapter.html", 'w', encoding='utf-8')
     file.write(html)
     file.close()
