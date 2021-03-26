@@ -1,14 +1,13 @@
 import datetime
-
 import requests
 from bs4 import BeautifulSoup
 import pymysql
 
-def get_page(url, headers):
+def get_page(url, headers, mode):
     html = requests.get(url, headers=headers).text
     soup = BeautifulSoup(html, 'lxml')
     html = soup.prettify()
-    with open("zhihu.html", 'w', encoding="utf-8") as f:
+    with open("zhihu_" + str(mode) + ".html",  'w', encoding="utf-8") as f:
         f.write(html)
 
 def parse_html(html):
@@ -74,7 +73,8 @@ if __name__ == '__main__':
         'Host': 'www.zhihu.com',
         'cookie': cookie
     }
-    get_page("https://www.zhihu.com/hot", headers)
+    get_page("https://www.zhihu.com/hot", headers, "hot")
+    file.close()
     with open("zhihu.html", 'r', encoding="utf-8") as f:
         html = f.read()
         parse_html(html)
