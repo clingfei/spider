@@ -1,14 +1,15 @@
 import requests
 from bs4 import BeautifulSoup
-import pymysql
 import re
+import get_catalog
 
 def get_page(url, headers):
     html = requests.get(url, headers=headers).text
     soup = BeautifulSoup(html, 'lxml')
     html = soup.prettify()
-    with open("zhihu_salt.html",  'w', encoding="utf-8") as f:
-        f.write(html)
+    #with open("zhihu_salt.html",  'w', encoding="utf-8") as f:
+    #    f.write(html)
+    return html
 
 def parse_html(html):
     soup = BeautifulSoup(html, 'lxml')
@@ -19,8 +20,11 @@ def parse_html(html):
             if(len(t.string) < 10):
                 pass
             else:
+                title = t.string[13: -12]
+                title.replace(" ", "")
+                title.replace("\n", "")
                 data = {
-                    'title': t.string[12: -1],
+                    'title': title,
                     'link': ''
                 }
                 arr.append(data)
@@ -35,18 +39,12 @@ def parse_html(html):
             arr[i]['link'] = result.group()[68:-2]
             i += 1
 
-    for s in arr:
-        print(s)
+    get_catalog.get_catalog(arr)
+
 
 if __name__ == '__main__':
-    file = open("cookies.txt", 'r', encoding='utf-8')
-    cookie = file.read()
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.182 Safari/537.36 Edg/88.0.705.81',
-        'Host': 'www.zhihu.com',
-        'cookie': cookie
-    }
-    #get_page("https://www.zhihu.com/xen/market/vip/remix-album", headers)
-    with open("zhihu_salt.html", 'r', encoding='utf-8') as f:
-        html = f.read()
-        parse_html(html)
+    headers = get_catalog.get_headers()
+    html = get_page("https://www.zhihu.com/xen/market/vip/remix-album", headers)
+    #with open("zhihu_salt.html", 'r', encoding='utf-8') as f:
+    #html = f.read()
+    parse_html(html)

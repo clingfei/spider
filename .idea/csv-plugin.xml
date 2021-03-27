@@ -24,6 +24,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\get_list.py">
+          <value>
+            <Attribute>
+              <option name="separator" value=":" />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\get_salt.py">
           <value>
             <Attribute>

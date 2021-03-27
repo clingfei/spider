@@ -6,11 +6,14 @@ import os
 import get_chapter
 
 """得到一部小说的主页面"""
-def get_init_page(url, headers):
+def get_init_page(url, headers, title):
     html =requests.get(url, headers=headers).text
     soup = BeautifulSoup(html, 'lxml')
     html = soup.prettify()
-    title = get_title(html)         #title用于标志小说的路径名
+    try:
+        os.makedirs(title)
+    except:
+        return
     sum = get_total(html)
     parse_html(url, html, title)
     process_ajax(sum, title, url)
@@ -40,28 +43,24 @@ def parse_html(url, html, title):
     id = re.findall("track_id=[0-9]{19}", textarea)
 
     i, j = -1, -1
+    print(chapter)
+    print(url)
     for section in sections:
         params = {
             "url": "",
             "serial_number_txt": ""
         }
-        if re.search("第 1 节", section):
-            j += 1
+        if len(chapter) > 0:
+            if re.search("第 1 节", section):
+                j += 1
+            params["serial_number_txt"] = chapter[j] + section[0:6]
+        else:
+            params["serial_number_txt"] = section[0:6]
         i += 1
-        params["serial_number_txt"] = chapter[j] + section[0:6]
         params["url"] = base_url  + "/section/" + id[i][9:]
         arr.append(params)
 
     get_chapter.getArr(arr, title)
-
-"""获得小说标题，并创建文件夹"""
-def get_title(html):
-    soup = BeautifulSoup(html, 'lxml')
-    result = soup.find(name="title")
-    title = result.text[4:-3]
-    print(title)
-    os.makedirs(title)
-    return title
 
 """得到已更新的章节数"""
 def get_total(html):
@@ -133,11 +132,11 @@ def get_headers():
     file.close()
     return headers
 
-if __name__ == '__main__':
-    headers = get_headers()
-    get_init_page("https://www.zhihu.com/xen/market/remix/paid_column/1312485331866730496", headers)
-    #with open("zhihu_text.html", 'r', encoding='utf-8') as f:
-    #    html = f.read()
-    #    parse_html(html)
+def get_catalog(arr):
+    for params in arr:
+        title = params['title']
+        url = params['link']
+        headers = get_headers()
+        get_init_page(url, headers, title)
 
 
