@@ -49,7 +49,7 @@ def parse_html(url, html, title):
             j += 1
         i += 1
         params["serial_number_txt"] = chapter[j] + section[0:6]
-        params["url"] = base_url + "1312485331866730496" + "/section/" + id[i][9:]
+        params["url"] = base_url  + "/section/" + id[i][9:]
         arr.append(params)
 
     get_chapter.getArr(arr, title)
@@ -72,7 +72,6 @@ def get_total(html):
     else:
         result = re.search("第 .*? 节", totals.string)
     sum = int(result.group()[2: -2])
-    print(sum)
     return sum
 
 """
@@ -80,7 +79,6 @@ def get_total(html):
     由于分批显示所有目录，因此可依次爬取每个目录中的小说文本
 """
 def process_ajax(total, title, url):
-    #print(total, title)
     base_url = "https://api.zhihu.com/remix/well/" + url[-19:] + "/catalog?"   #这里的Url应该换成通用的
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.182 Safari/537.36 Edg/88.0.705.81',
@@ -97,13 +95,10 @@ def process_ajax(total, title, url):
     while((params['offset'] + params['limit']) < total):
         params['offset'] += 13
         url = base_url + urlencode(params)
-        print(url)
         try:
             response = requests.get(url, headers=headers)
-            print(response.status_code)
             if response.status_code == 200:
                 parse_json(response.json(), re.search('/[0-9]+?/', base_url).group()[1: -1], title)
-                print(params['offset'] + params['limit'])
         except requests.ConnectionError as e:
             print('Error', e.args)
 
@@ -124,6 +119,7 @@ def parse_json(json, article_no, title):
         serial_number_txt = json["data"][i]["chapter"]["serial_number_txt"] + json['data'][i]["index"]["serial_number_txt"]
         params["serial_number_txt"] = serial_number_txt
         arr.append(params)
+
     get_chapter.getArr(arr, title)
 
 def get_headers():
