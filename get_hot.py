@@ -3,13 +3,14 @@ import requests
 from bs4 import BeautifulSoup
 import pymysql
 
-def get_page(url, headers, mode):
+"""获取热榜页面"""
+def get_page(url, headers):
     html = requests.get(url, headers=headers).text
     soup = BeautifulSoup(html, 'lxml')
     html = soup.prettify()
-    with open("zhihu_" + str(mode) + ".html",  'w', encoding="utf-8") as f:
-        f.write(html)
+    return html
 
+"""处理html页面，生成每一条数据的标题、链接和简介"""
 def parse_html(html):
     soup = BeautifulSoup(html, 'lxml')
     titles = soup.find_all(class_="HotItem-title")
@@ -17,6 +18,10 @@ def parse_html(html):
     links = soup.find_all(class_="HotItem-img")
     create_dic(titles, contents, links)
 
+"""
+接收来自paese_html传递的参数，将其合并入字典,并传入store_intext函数中用以生成文件
+实际上，如果将store_intext函数更换为store_indb, 可以存入本地的mysql数据库中
+"""
 def create_dic(titles, contents, links):
     arr = []
     for i in range(0, 50):
@@ -41,6 +46,7 @@ def create_dic(titles, contents, links):
         i += 1
     store_intext(arr)
 
+"""将字典存入文件"""
 def store_intext(arr):
     time = datetime.date.today()
     docName = "hot_" + str(time) + ".txt"
@@ -52,6 +58,7 @@ def store_intext(arr):
         file.write("\n\n")
     file.close()
 
+"""将字典存入数据库"""
 def store_indb(arr):
     db = pymysql.connect(host="localhost", user="root", password="root", port=3306, database="spiders")
     cursor = db.cursor()
@@ -73,8 +80,7 @@ if __name__ == '__main__':
         'Host': 'www.zhihu.com',
         'cookie': cookie
     }
-    get_page("https://www.zhihu.com/hot", headers, "hot")
     file.close()
-    with open("zhihu.html", 'r', encoding="utf-8") as f:
-        html = f.read()
-        parse_html(html)
+    url = "https://www.zhihu.com/hot"
+    html = get_page(url, headers)
+    parse_html(html)

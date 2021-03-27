@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import re
 import get_catalog
 
+"""获得盐选小说排行榜页面"""
 def get_page(url, headers):
     html = requests.get(url, headers=headers).text
     soup = BeautifulSoup(html, 'lxml')
@@ -11,6 +12,7 @@ def get_page(url, headers):
     #    f.write(html)
     return html
 
+"""处理小说排行榜, 并将每部小说标题及其链接传入get_catalog作进一步处理"""
 def parse_html(html):
     soup = BeautifulSoup(html, 'lxml')
     arr = []

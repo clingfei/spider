@@ -78,7 +78,7 @@ def get_total(html):
     由于分批显示所有目录，因此可依次爬取每个目录中的小说文本
 """
 def process_ajax(total, title, url):
-    base_url = "https://api.zhihu.com/remix/well/" + url[-19:] + "/catalog?"   #这里的Url应该换成通用的
+    base_url = "https://api.zhihu.com/remix/well/" + url[-19:] + "/catalog?"
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.182 Safari/537.36 Edg/88.0.705.81',
         'Referer': "https://www.zhihu.com/xen/market/remix/paid_column/" + url[-19:],
@@ -121,6 +121,7 @@ def parse_json(json, article_no, title):
 
     get_chapter.getArr(arr, title)
 
+"""生成请求头"""
 def get_headers():
     file = open("cookies.txt", 'r', encoding='utf-8')
     cookie = file.read()
@@ -132,6 +133,7 @@ def get_headers():
     file.close()
     return headers
 
+"""获得每部小说的标题及其链接"""
 def get_catalog(arr):
     for params in arr:
         title = params['title']
