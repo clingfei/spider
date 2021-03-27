@@ -1,44 +1,132 @@
 import requests
 from bs4 import BeautifulSoup
-import pymysql
 import re
+from urllib.parse import urlencode
+import os
+import get_chapter
 
-def get_page(url, headers):
-    html = requests.get(url, headers=headers).text
+"""得到一部小说的主页面"""
+def get_init_page(url, headers):
+    html =requests.get(url, headers=headers).text
     soup = BeautifulSoup(html, 'lxml')
     html = soup.prettify()
-    with open("zhihu_salt.html",  'w', encoding="utf-8") as f:
-        f.write(html)
+    title = get_title(html)         #title用于标志小说的路径名
+    sum = get_total(html)
+    parse_html(url, html, title)
+    process_ajax(sum, title, url)
 
-def parse_html(html):
+"""处理小说初始页面的章节目录"""
+def parse_html(url, html, title):
     soup = BeautifulSoup(html, 'lxml')
+    res_chapters = soup.find_all(class_="CatalogModule-chapterCommonTitle-cbpkp")
+
+    chapter = []
+    for res_chapter in res_chapters:
+        chapter.append(res_chapter.text[11:-10])
+
+    sections = []
+    results = soup.find_all(class_="Image-imageWrapper-7zqcD ChapterItem-vipTag-vJ2vM")
+    for result in results:
+        for res_section in result.next_siblings:
+            tmp = res_section.string
+            tmp = tmp.replace('\n', "")
+            if len(tmp) > 2:
+                sections.append(tmp[12:-11])
+
     arr = []
-    titles = soup.find_all(class_="VerticalMiddle-root-g9oA5 ProductTitleTag-root-mWWpm ProductCell-titleTag-8AuZ3")
-    for title in titles:
-        for t in title.next_siblings:
-            if(len(t.string) < 10):
-                pass
-            else:
-                data = {
-                    'title': t.string[12: -1],
-                    'link': ''
-                }
-                arr.append(data)
+    base_url = "https://www.zhihu.com/market/paid_column/" + url[-19:]
 
-    links = soup.find_all(class_="ProductCell-root-3LLcu InfiniteData-autoCell-hFmUN")
-    i = -1
-    for link in links:
-        if i < 0:
-            i += 1
-        else:
-            result = re.match('<a class="ProductCell-root-3LLcu InfiniteData-autoCell-hFmUN" href=".*?">', str(link))
-            arr[i]['link'] = result.group()[68:-2]
-            i += 1
+    textarea = soup.find(name="textarea").text
+    id = re.findall("track_id=[0-9]{19}", textarea)
 
-    for s in arr:
-        print(s)
+    i, j = -1, -1
+    for section in sections:
+        params = {
+            "url": "",
+            "serial_number_txt": ""
+        }
+        if re.search("第 1 节", section):
+            j += 1
+        i += 1
+        params["serial_number_txt"] = chapter[j] + section[0:6]
+        params["url"] = base_url + "1312485331866730496" + "/section/" + id[i][9:]
+        arr.append(params)
 
-if __name__ == '__main__':
+    get_chapter.getArr(arr, title)
+
+"""获得小说标题，并创建文件夹"""
+def get_title(html):
+    soup = BeautifulSoup(html, 'lxml')
+    result = soup.find(name="title")
+    title = result.text[4:-3]
+    print(title)
+    os.makedirs(title)
+    return title
+
+"""得到已更新的章节数"""
+def get_total(html):
+    soup = BeautifulSoup(html, 'lxml')
+    totals = soup.find(class_="CatalogModule-updateText-upu4E")
+    if re.search("已完结", totals.string):
+        result = re.search("共 .*? 节", totals.string)
+    else:
+        result = re.search("第 .*? 节", totals.string)
+    sum = int(result.group()[2: -2])
+    print(sum)
+    return sum
+
+"""
+    处理ajax请求，获取一部小说的全部目录,获得每一次展开的目录的json格式的响应
+    由于分批显示所有目录，因此可依次爬取每个目录中的小说文本
+"""
+def process_ajax(total, title, url):
+    #print(total, title)
+    base_url = "https://api.zhihu.com/remix/well/" + url[-19:] + "/catalog?"   #这里的Url应该换成通用的
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.182 Safari/537.36 Edg/88.0.705.81',
+        'Referer': "https://www.zhihu.com/xen/market/remix/paid_column/" + url[-19:],
+        'origin': 'https: // www.zhihu.com',
+        'X-Requested-With': 'Fetch',
+    }
+    params = {
+        'offset': 10,
+        'limit': 13,
+        'order_by': 'global_idx',
+        'is_new_column': 'true'
+    }
+    while((params['offset'] + params['limit']) < total):
+        params['offset'] += 13
+        url = base_url + urlencode(params)
+        print(url)
+        try:
+            response = requests.get(url, headers=headers)
+            print(response.status_code)
+            if response.status_code == 200:
+                parse_json(response.json(), re.search('/[0-9]+?/', base_url).group()[1: -1], title)
+                print(params['offset'] + params['limit'])
+        except requests.ConnectionError as e:
+            print('Error', e.args)
+
+"""
+    获取ajax传送的json数据，并依次提取其章节名，章节url
+    arr中的数据包括url和章节名两部分
+"""
+def parse_json(json, article_no, title):
+    base_url = "https://www.zhihu.com/market/paid_column/"
+    arr = []
+    for i in range(len(json["data"])):
+        params = {
+            "url": "",
+            "serial_number_txt": ""
+        }
+        url = base_url + str(article_no) + "/section/" + json["data"][i]["id"]
+        params["url"] = url
+        serial_number_txt = json["data"][i]["chapter"]["serial_number_txt"] + json['data'][i]["index"]["serial_number_txt"]
+        params["serial_number_txt"] = serial_number_txt
+        arr.append(params)
+    get_chapter.getArr(arr, title)
+
+def get_headers():
     file = open("cookies.txt", 'r', encoding='utf-8')
     cookie = file.read()
     headers = {
@@ -46,7 +134,14 @@ if __name__ == '__main__':
         'Host': 'www.zhihu.com',
         'cookie': cookie
     }
-    #get_page("https://www.zhihu.com/xen/market/vip/remix-album", headers)
-    with open("zhihu_salt.html", 'r', encoding='utf-8') as f:
-        html = f.read()
-        parse_html(html)
+    file.close()
+    return headers
+
+if __name__ == '__main__':
+    headers = get_headers()
+    get_init_page("https://www.zhihu.com/xen/market/remix/paid_column/1312485331866730496", headers)
+    #with open("zhihu_text.html", 'r', encoding='utf-8') as f:
+    #    html = f.read()
+    #    parse_html(html)
+
+
